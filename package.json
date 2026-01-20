@@ -1,5 +1,5 @@
 {
-  "name": "sistem_monitoring",
+  "name": "sistem-monitoring",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -35,5 +35,8 @@
     "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
     "typescript": "^5"
+  },
+  "prisma": {
+    "seed": "npx tsx prisma/seed.ts"
   }
 }
