@@ -1,0 +1,119 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Models
+
+model User {
+  id            String   @id @default(uuid())
+  name          String
+  email         String   @unique
+  password_hash String
+  role          String   // ADMIN, TECHNICIAN
+  is_active     Boolean  @default(true)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  // Relations
+  created_pre_orders      PreOrder[]            @relation("CreatedBy")
+  updated_work_units      WorkUnit[]            @relation("LastUpdatedBy")
+  technician_assignments  WorkUnitAssignment[]  @relation("Technician")
+  assigner_assignments    WorkUnitAssignment[]  @relation("AssignedBy")
+  progress_logs           WorkUnitProgressLog[] @relation("LogUpdatedBy")
+  attendances             Attendance[]          @relation("TechnicianAttendance")
+
+  @@map("users")
+}
+
+model PreOrder {
+  id            String      @id @default(uuid())
+  order_code    String      @unique // PO-YYYYMM-XXXX
+  customer_name String
+  description   String
+  status        String      @default("DRAFT") // DRAFT, ACTIVE, COMPLETED, CANCELLED
+  created_by_id String
+  created_at    DateTime    @default(now())
+  updated_at    DateTime    @updatedAt
+
+  // Relations
+  created_by    User        @relation("CreatedBy", fields: [created_by_id], references: [id])
+  work_units    WorkUnit[]
+
+  @@map("pre_orders")
+}
+
+model WorkUnit {
+  id                 String     @id @default(uuid())
+  pre_order_id       String
+  type               String     // AIR, ELECTRICAL, PHYSICAL
+  progress           Int        @default(0) // 0-100
+  status             String     @default("PENDING") // PENDING, IN_PROGRESS, DONE
+  last_updated_by_id String?
+  last_updated_at    DateTime?
+  created_at         DateTime   @default(now())
+
+  // Relations
+  pre_order          PreOrder              @relation(fields: [pre_order_id], references: [id], onDelete: Cascade)
+  last_updated_by    User?                 @relation("LastUpdatedBy", fields: [last_updated_by_id], references: [id])
+  assignments        WorkUnitAssignment[]
+  progress_logs      WorkUnitProgressLog[]
+
+  @@map("work_units")
+}
+
+model WorkUnitAssignment {
+  id              String    @id @default(uuid())
+  work_unit_id    String
+  technician_id   String
+  assigned_by_id  String
+  assigned_at     DateTime  @default(now())
+  unassigned_at   DateTime?
+  handover_note   String?
+
+  // Relations
+  work_unit       WorkUnit  @relation(fields: [work_unit_id], references: [id], onDelete: Cascade)
+  technician      User      @relation("Technician", fields: [technician_id], references: [id])
+  assigned_by     User      @relation("AssignedBy", fields: [assigned_by_id], references: [id])
+
+  @@map("work_unit_assignments")
+}
+
+model WorkUnitProgressLog {
+  id              String   @id @default(uuid())
+  work_unit_id    String
+  progress_before Int
+  progress_after  Int
+  updated_by_id   String
+  updated_at      DateTime @default(now())
+  note            String?
+
+  // Relations
+  work_unit       WorkUnit @relation(fields: [work_unit_id], references: [id], onDelete: Cascade)
+  updated_by      User     @relation("LogUpdatedBy", fields: [updated_by_id], references: [id])
+
+  @@map("work_unit_progress_logs")
+}
+
+model Attendance {
+  id                    String           @id @default(uuid())
+  technician_id         String
+  date                  DateTime         
+  tap_in                DateTime
+  tap_out               DateTime?
+  work_duration_minutes Int              @default(0)
+  status                String           // ON_TIME, LATE, OVERTIME
+  created_at            DateTime         @default(now())
+
+  // Relations
+  technician            User             @relation("TechnicianAttendance", fields: [technician_id], references: [id])
+
+  @@map("attendances")
+}
