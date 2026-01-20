@@ -1,0 +1,123 @@
+{
+  "system": {
+    "name": "Work Progress & Attendance Monitoring",
+    "timezone": "Asia/Jakarta",
+    "roles": ["admin", "technician"],
+    "description": "Web application for monitoring work progress (pre-order & work unit) and employee attendance"
+  },
+
+  "entities": {
+    "users": {
+      "id": "uuid",
+      "name": "string",
+      "email": "string",
+      "password_hash": "string",
+      "role": "admin | technician",
+      "is_active": true,
+      "created_at": "timestamp",
+      "updated_at": "timestamp"
+    },
+
+    "pre_orders": {
+      "id": "uuid",
+      "order_code": "PO-YYYYMM-XXXX",
+      "customer_name": "string",
+      "description": "string",
+      "status": "draft | active | completed | cancelled",
+      "created_by": "users.id",
+      "created_at": "timestamp",
+      "updated_at": "timestamp"
+    },
+
+    "work_units": {
+      "id": "uuid",
+      "pre_order_id": "pre_orders.id",
+      "type": "air | electrical | physical",
+      "progress": 0,
+      "status": "pending | in_progress | done",
+      "last_updated_by": "users.id",
+      "last_updated_at": "timestamp",
+      "created_at": "timestamp"
+    },
+
+    "work_unit_assignments": {
+      "id": "uuid",
+      "work_unit_id": "work_units.id",
+      "technician_id": "users.id",
+      "assigned_by": "users.id",
+      "assigned_at": "timestamp",
+      "unassigned_at": "timestamp | null",
+      "handover_note": "string | null"
+    },
+
+    "work_unit_progress_logs": {
+      "id": "uuid",
+      "work_unit_id": "work_units.id",
+      "progress_before": 0,
+      "progress_after": 0,
+      "updated_by": "users.id",
+      "updated_at": "timestamp",
+      "note": "string | null"
+    },
+
+    "attendances": {
+      "id": "uuid",
+      "technician_id": "users.id",
+      "date": "YYYY-MM-DD",
+      "tap_in": "timestamp",
+      "tap_out": "timestamp | null",
+      "work_duration_minutes": 0,
+      "status": "on_time | late | overtime",
+      "created_at": "timestamp"
+    }
+  },
+
+  "permissions": {
+    "admin": {
+      "pre_orders": ["create", "read", "update", "delete"],
+      "work_units": ["create", "read", "update", "delete"],
+      "assignments": ["assign", "reassign"],
+      "progress": ["read", "reset"],
+      "attendance": ["read_all"]
+    },
+    "technician": {
+      "pre_orders": ["read"],
+      "work_units": ["read_assigned"],
+      "progress": ["update"],
+      "attendance": ["tap_in", "tap_out", "read_self"]
+    }
+  },
+
+  "business_rules": {
+    "progress": {
+      "min": 0,
+      "max": 100,
+      "allow_decrease": false,
+      "only_assigned_technician_can_update": true
+    },
+    "status_derivation": {
+      "pending": "progress == 0",
+      "in_progress": "progress > 0 && progress < 100",
+      "done": "progress == 100"
+    },
+    "assignment": {
+      "only_admin_can_assign": true,
+      "single_active_assignment": true,
+      "lock_assignment_when_done": true
+    },
+    "attendance": {
+      "one_tap_in_per_day": true,
+      "tap_out_requires_tap_in": true,
+      "server_time_only": true
+    }
+  },
+
+  "relations": [
+    "users.id -> pre_orders.created_by",
+    "pre_orders.id -> work_units.pre_order_id",
+    "work_units.id -> work_unit_assignments.work_unit_id",
+    "users.id -> work_unit_assignments.technician_id",
+    "work_units.id -> work_unit_progress_logs.work_unit_id",
+    "users.id -> attendances.technician_id"
+  ]
+}
