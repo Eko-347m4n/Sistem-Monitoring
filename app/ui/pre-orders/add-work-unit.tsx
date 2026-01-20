@@ -18,7 +18,7 @@ export default function AddWorkUnitButton({ preOrderId }: { preOrderId: string }
         <button
           key={type}
           onClick={() => handleAdd(type)}
-          className="flex items-center gap-1 text-xs bg-white border border-gray-300 px-3 py-1 rounded-md hover:bg-gray-50"
+          className="flex items-center gap-1 text-xs bg-white border border-slate-300 px-3 py-1 rounded-md hover:bg-slate-50"
         >
           <PlusIcon className="w-3" /> Add {type}
         </button>

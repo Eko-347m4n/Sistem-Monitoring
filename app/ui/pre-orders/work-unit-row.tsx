@@ -27,9 +27,9 @@ export default function WorkUnitRow({
       <td className="px-3 py-4 font-bold">{unit.type}</td>
       <td className="px-3 py-4">
         <div className="flex items-center gap-2">
-          <div className="w-full bg-gray-200 rounded-full h-2.5 max-w-[100px]">
+          <div className="w-full bg-slate-200 rounded-full h-2.5 max-w-[100px]">
             <div 
-              className="bg-blue-600 h-2.5 rounded-full" 
+              className="bg-indigo-600 h-2.5 rounded-full" 
               style={{ width: `${unit.progress}%` }}
             ></div>
           </div>
@@ -40,7 +40,7 @@ export default function WorkUnitRow({
         <span className={`text-xs px-2 py-1 rounded ${
           unit.status === 'DONE' ? 'bg-green-100 text-green-800' :
           unit.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-800' :
-          'bg-gray-100 text-gray-800'
+          'bg-slate-100 text-slate-800'
         }`}>
           {unit.status}
         </span>

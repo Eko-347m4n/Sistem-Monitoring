@@ -27,7 +27,7 @@ export default async function Page() {
         <section>
           <h2 className="mb-4 text-lg font-bold text-slate-800 flex items-center gap-2">
             Active Tasks
-            <span className="bg-indigo-100 text-indigo-600 text-xs px-2 py-1 rounded-full">{tasks.length}</span>
+            <span className="bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded-full">{tasks.length}</span>
           </h2>
           <div className="space-y-4">
             {tasks.length === 0 ? (

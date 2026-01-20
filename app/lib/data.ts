@@ -93,3 +93,55 @@ export async function fetchPreOrders() {
     throw new Error('Failed to fetch pre-orders data.');
   }
 }
+
+export async function fetchWorkUnits() {
+  try {
+    const workUnits = await prisma.workUnit.findMany({
+      include: {
+        pre_order: {
+          select: { order_code: true, customer_name: true }
+        },
+        assignments: {
+          where: { unassigned_at: null },
+          include: {
+            technician: { select: { name: true } }
+          }
+        }
+      },
+      orderBy: { created_at: 'desc' }
+    });
+    return workUnits;
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to fetch work units.');
+  }
+}
+
+export async function fetchAttendances() {
+  try {
+    const attendances = await prisma.attendance.findMany({
+      include: {
+        technician: {
+          select: { name: true, email: true }
+        }
+      },
+      orderBy: { date: 'desc' }
+    });
+    return attendances;
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to fetch attendances.');
+  }
+}
+
+export async function fetchUsers() {
+  try {
+    const users = await prisma.user.findMany({
+      orderBy: { name: 'asc' },
+    });
+    return users;
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to fetch users.');
+  }
+}
