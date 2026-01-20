@@ -1,7 +1,14 @@
 import { fetchWorkUnits } from '@/app/lib/data';
 import Link from 'next/link';
+import { auth } from '@/auth';
+import { notFound } from 'next/navigation';
 
 export default async function Page() {
+  const session = await auth();
+  if (session?.user?.role !== 'ADMIN') {
+    notFound();
+  }
+
   const workUnits = await fetchWorkUnits();
 
   return (
