@@ -4,8 +4,8 @@ import { notFound } from 'next/navigation';
 import WorkUnitRow from '@/app/ui/pre-orders/work-unit-row';
 import AddWorkUnitButton from '@/app/ui/pre-orders/add-work-unit';
 
-export default async function Page({ params }: { params: { id: string } }) {
-  const id = params.id;
+export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const [preOrder, technicians] = await Promise.all([
     fetchPreOrderById(id),
     fetchTechnicians(),

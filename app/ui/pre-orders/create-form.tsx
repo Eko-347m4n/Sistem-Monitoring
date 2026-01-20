@@ -60,6 +60,26 @@ export default function Form() {
           </div>
         </div>
 
+        {/* Work Units Selection */}
+        <div className="mb-4">
+          <label className="mb-2 block text-sm font-medium">
+            Initial Work Units
+          </label>
+          <div className="flex gap-4">
+            {['AIR', 'ELECTRICAL', 'PHYSICAL'].map((type) => (
+              <label key={type} className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="work_types"
+                  value={type}
+                  className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600"
+                />
+                <span className="text-sm text-slate-700 capitalize">{type.toLowerCase()}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
         <div aria-live="polite" aria-atomic="true">
             {state.message && (
                 <p className="mt-2 text-sm text-red-500">

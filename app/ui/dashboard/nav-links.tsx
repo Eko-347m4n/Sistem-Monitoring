@@ -31,12 +31,17 @@ const links = [
   { name: 'Users', href: '/dashboard/users', icon: UserGroupIcon },
 ];
 
-export default function NavLinks() {
+export default function NavLinks({ role }: { role: string }) {
   const pathname = usePathname();
+
+  const filteredLinks = links.filter(link => {
+    if (role === 'ADMIN') return true;
+    return link.name === 'Dashboard' || link.name === 'Pre-Orders';
+  });
 
   return (
     <>
-      {links.map((link) => {
+      {filteredLinks.map((link) => {
         const LinkIcon = link.icon;
         const isActive = pathname === link.href;
         

@@ -35,6 +35,7 @@ export async function createWorkUnit(preOrderId: string, type: string) {
       },
     });
     revalidatePath(`/dashboard/pre-orders/${preOrderId}`);
+    revalidatePath('/dashboard/work-units');
     return { message: 'Success' };
   } catch (error) {
     return { message: 'Failed to create work unit.' };
@@ -64,6 +65,8 @@ export async function assignTechnician(workUnitId: string, technicianId: string,
     });
 
     revalidatePath(`/dashboard/pre-orders/${preOrderId}`);
+    revalidatePath('/dashboard/work-units');
+    revalidatePath('/dashboard'); // Update technician dashboard tasks
     return { message: 'Success' };
   } catch (error) {
     return { message: 'Failed to assign technician.' };
@@ -78,7 +81,7 @@ export async function updateWorkProgress(workUnitId: string, newProgress: number
     // 1. Get current state
     const currentUnit = await prisma.workUnit.findUnique({
       where: { id: workUnitId },
-      select: { progress: true, status: true }
+      select: { progress: true, status: true, pre_order_id: true }
     });
 
     if (!currentUnit) return { message: 'Work unit not found.' };
@@ -88,23 +91,26 @@ export async function updateWorkProgress(workUnitId: string, newProgress: number
       return { message: 'Progress cannot decrease.' };
     }
 
-    // Determine new status
-    let newStatus = currentUnit.status;
-    if (newProgress === 100) newStatus = 'DONE';
-    else if (newProgress > 0) newStatus = 'IN_PROGRESS';
+    // Determine new status for Work Unit
+    let newUnitStatus = currentUnit.status;
+    if (newProgress === 100) newUnitStatus = 'DONE';
+    else if (newProgress > 0) newUnitStatus = 'IN_PROGRESS';
 
-    // 2. Transaction: Update Unit + Create Log
-    await prisma.$transaction([
-      prisma.workUnit.update({
+    // 2. Transaction: Update Unit + Create Log + Update PO Status
+    await prisma.$transaction(async (tx) => {
+      // A. Update Work Unit
+      await tx.workUnit.update({
         where: { id: workUnitId },
         data: {
           progress: newProgress,
-          status: newStatus,
+          status: newUnitStatus,
           last_updated_by_id: session.user.id,
           last_updated_at: new Date(),
         }
-      }),
-      prisma.workUnitProgressLog.create({
+      });
+
+      // B. Create Progress Log
+      await tx.workUnitProgressLog.create({
         data: {
           work_unit_id: workUnitId,
           progress_before: currentUnit.progress,
@@ -112,12 +118,51 @@ export async function updateWorkProgress(workUnitId: string, newProgress: number
           updated_by_id: session.user.id,
           note: note
         }
-      })
-    ]);
+      });
+
+      // C. Update Pre-Order Status Logic
+      const allUnits = await tx.workUnit.findMany({
+        where: { pre_order_id: currentUnit.pre_order_id },
+        select: { status: true, progress: true }
+      });
+
+      const allDone = allUnits.every(u => u.status === 'DONE');
+      const anyProgress = allUnits.some(u => u.progress > 0);
+      
+      // Get current PO status
+      const currentPO = await tx.preOrder.findUnique({
+          where: { id: currentUnit.pre_order_id },
+          select: { status: true }
+      });
+
+      if (currentPO) {
+          let newPOStatus = currentPO.status;
+
+          if (allDone && allUnits.length > 0) {
+              newPOStatus = 'COMPLETED';
+          } else if (anyProgress && newPOStatus !== 'ACTIVE') {
+               // If started but not finished, ensure ACTIVE (unless cancelled, but logic here assumes flow DRAFT->ACTIVE->COMPLETED)
+               if (newPOStatus === 'DRAFT' || newPOStatus === 'COMPLETED') {
+                   newPOStatus = 'ACTIVE';
+               }
+          }
+
+          if (newPOStatus !== currentPO.status) {
+              await tx.preOrder.update({
+                  where: { id: currentUnit.pre_order_id },
+                  data: { status: newPOStatus }
+              });
+          }
+      }
+    });
 
     revalidatePath('/dashboard');
+    revalidatePath('/dashboard/work-units');
+    revalidatePath(`/dashboard/pre-orders/${currentUnit.pre_order_id}`);
+    revalidatePath('/dashboard/pre-orders'); // Also revalidate PO list
     return { message: 'Success' };
   } catch (error) {
+    console.error(error);
     return { message: 'Failed to update progress.' };
   }
 }
@@ -194,6 +239,7 @@ export async function createPreOrder(prevState: any, formData: FormData) {
   }
 
   const { customer_name, description } = validatedFields.data;
+  const workTypes = formData.getAll('work_types');
   
   // Generate Order Code: PO-YYYYMM-XXXX
   const date = new Date();
@@ -213,22 +259,37 @@ export async function createPreOrder(prevState: any, formData: FormData) {
   const order_code = `${prefix}${String(count + 1).padStart(4, '0')}`;
 
   try {
-    await prisma.preOrder.create({
-      data: {
-        order_code,
-        customer_name,
-        description,
-        status: 'DRAFT',
-        created_by_id: session.user.id,
-      },
+    await prisma.$transaction(async (tx) => {
+      const newPO = await tx.preOrder.create({
+        data: {
+          order_code,
+          customer_name,
+          description,
+          status: 'DRAFT',
+          created_by_id: session.user.id,
+        },
+      });
+
+      if (workTypes.length > 0) {
+        await tx.workUnit.createMany({
+          data: workTypes.map((type) => ({
+            pre_order_id: newPO.id,
+            type: String(type),
+            status: 'PENDING',
+            progress: 0,
+          })),
+        });
+      }
     });
   } catch (error) {
+    console.error(error);
     return {
       message: 'Database Error: Failed to Create Pre-Order.',
     };
   }
 
   revalidatePath('/dashboard/pre-orders');
+  revalidatePath('/dashboard/work-units');
   redirect('/dashboard/pre-orders');
 }
 
