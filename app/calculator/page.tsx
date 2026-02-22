@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 export default function CalculatorPage() {
-  const [kilometers, setKilometers] = useState<number | ''>('');
+  const [kilometers, setKilometers] = useState<number | string>('');
   const [result, setResult] = useState<number | null>(null);
 
   const handleKilometersChange = (event: React.ChangeEvent<HTMLInputElement>) => {
